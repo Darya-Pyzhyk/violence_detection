@@ -7,14 +7,16 @@ model = get_model()
 
 threshold = 0.5
 
-def embed_video(video_path):
-    proba = classify(video_path)
+def embed_video(video_in, video_out):
+    proba = classify(video_in)
 
-    cap = cv2.VideoCapture(video_path) 
-    fourcc = _code_to_4cc(int(cap.get(6)))
+    cap = cv2.VideoCapture(video_in) 
     (w,h) = (int(cap.get(3)),int(cap.get(4)))
 
-    out = cv2.VideoWriter('output.avi',fourcc, cap.get(5), (w,h))
+    # h264 for web browsers compatibility 
+    # https://github.com/cisco/openh264/releases/tag/v1.8.0
+    # DOWNLOAD AND ADD TO PATH 
+    out = cv2.VideoWriter(video_out,cv2.VideoWriter_fourcc(*'h264'), cap.get(5), (w,h))
 
     is_border = False
     for i in range(int(cap.get(7))):
@@ -34,6 +36,7 @@ def embed_video(video_path):
 
     cap.release()
     out.release()
+    print(f'Successfuly written with codec h264!')
 
 def _draw_border(image):
     h,w,_ = image.shape
@@ -65,10 +68,6 @@ def _draw_text(image, text):
                     color, thickness)
     return image
 
-def _code_to_4cc(code):
-    cc = [chr(code & 0xFF), chr((code & 0xFF00) >> 8),chr((code & 0xFF0000) >> 16),chr((code & 0xFF000000) >> 24)]
-    return cv2.VideoWriter_fourcc(*cc)
-
 def classify(video_path):
     video = video_to_npy(video_path)
     chunks = _get_video_chunks(video)
@@ -86,9 +85,3 @@ def _get_video_chunks(video):
         data[...,3:] = normalize(data[...,3:])
         chunks.append(data)
     return np.array(chunks)
-
-  
-dataset_path = 'data'
-nonfight = f'{dataset_path}/RWF-2000/RWF-2000/val/NonFight/Assault006_x264_0.avi'
-fight = f'{dataset_path}/RWF-2000/RWF-2000/val/Fight/39BFeYnbu-I_0.avi'
-embed_video(fight)
