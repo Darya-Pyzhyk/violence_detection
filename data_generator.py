@@ -1,8 +1,11 @@
-import tensorflow as tf
-from tensorflow.keras.utils import Sequence, to_categorical
-import numpy as np
 import os
 import cv2
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.utils import Sequence, to_categorical
+
+from model import FRAMES_PER_VIDEO
+
 
 class DataGenerator(Sequence):
     """Data Generator inherited from keras.utils.Sequence
@@ -13,12 +16,13 @@ class DataGenerator(Sequence):
     Note:
         If you want to load file with other data format, please fix the method of "load_data" as you want
     """
-    def __init__(self, directory, batch_size=1, shuffle=True, data_augmentation=True):
+    def __init__(self, directory, batch_size=1, shuffle=True, data_augmentation=True, max_files=200):
         # Initialize the params
         self.batch_size = batch_size
         self.directory = directory
         self.shuffle = shuffle
         self.data_aug = data_augmentation
+        self.max_files = max_files
         # Load all the save_path of files, and create a dictionary that save the pair of "data:label"
         self.X_path, self.Y_dict = self.search_data() 
         # Print basic statistics information
@@ -33,7 +37,9 @@ class DataGenerator(Sequence):
         one_hots = to_categorical(range(len(self.dirs)))
         for i,folder in enumerate(self.dirs):
             folder_path = os.path.join(self.directory,folder)
-            for file in os.listdir(folder_path):
+            for j,file in enumerate(os.listdir(folder_path)):
+                if j >=  (self.max_files // 2):
+                  break
                 file_path = os.path.join(folder_path,file)
                 # append the each file path, and keep its label  
                 X_path.append(file_path)
@@ -93,7 +99,7 @@ class DataGenerator(Sequence):
             video = np.flip(m=video, axis=2)
         return video    
     
-    def uniform_sampling(self, video, target_frames=64):
+    def uniform_sampling(self, video, target_frames=FRAMES_PER_VIDEO):
         # get total frames of input video and calculate sampling interval 
         len_frames = int(len(video))
         interval = int(np.ceil(len_frames/target_frames))
@@ -114,7 +120,7 @@ class DataGenerator(Sequence):
         # get sampled video
         return np.array(sampled_video, dtype=np.float32)
     
-    def random_clip(self, video, target_frames=64):
+    def random_clip(self, video, target_frames=FRAMES_PER_VIDEO):
         start_point = np.random.randint(len(video)-target_frames)
         return video[start_point:start_point+target_frames]
     
@@ -166,8 +172,8 @@ class DataGenerator(Sequence):
         # load the processed .npy files which have 5 channels (1-3 for RGB, 4-5 for optical flows)
         data = np.load(path, mmap_mode='r')
         data = np.float32(data)
-        # sampling 64 frames uniformly from the entire video
-        data = self.uniform_sampling(video=data, target_frames=64)
+        # sampling FRAMES_PER_VIDEO frames uniformly from the entire video
+        data = self.uniform_sampling(video=data, target_frames=FRAMES_PER_VIDEO)
         # whether to utilize the data augmentation
         if  self.data_aug:
             data[...,:3] = self.color_jitter(data[...,:3])

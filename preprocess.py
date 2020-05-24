@@ -7,7 +7,7 @@ from tqdm import tqdm
 import sys
 
 
-def getOpticalFlow(video):
+def get_optical_flow(video):
     """Calculate dense optical flow of input video
     Args:
         video: the input video with shape of [frames,height,width,channel]. dtype=np.array
@@ -39,7 +39,7 @@ def getOpticalFlow(video):
       
     return np.array(flows, dtype=np.float32)
 
-def Video2Npy(file_path, resize=(224,224)):
+def video_to_npy(file_path, resize=(224,224)):
     """Load video and tansfer it into .npy format
     Args:
         file_path: the path of video file
@@ -68,7 +68,7 @@ def Video2Npy(file_path, resize=(224,224)):
         cap.release()
             
     # Get the optical flow of video
-    flows = getOpticalFlow(frames)
+    flows = get_optical_flow(frames)
     
     result = np.zeros((len(flows),224,224,5))
     result[...,:3] = frames
@@ -76,7 +76,7 @@ def Video2Npy(file_path, resize=(224,224)):
     
     return result
 
-def Save2Npy(file_dir, save_dir):
+def save_to_npy(file_dir, save_dir):
     """Transfer all the videos and save them into specified directory
     Args:
         file_dir: source folder of target videos
@@ -94,12 +94,17 @@ def Save2Npy(file_dir, save_dir):
         # Get dest 
         save_path = os.path.join(save_dir, video_name+'.npy') 
         # Load and preprocess video
-        data = Video2Npy(file_path=video_path, resize=(224,224))
+        data = video_to_npy(file_path=video_path, resize=(224,224))
         data = np.uint8(data)
         # Save as .npy file
         np.save(save_path, data)
     
     return None
+
+def normalize(data):
+    mean = np.mean(data)
+    std = np.std(data)
+    return (data-mean) / std
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -112,4 +117,4 @@ if __name__ == "__main__":
             for f2 in ['Fight', 'NonFight']:
                 path1 = os.path.join(source_path, f1, f2)
                 path2 = os.path.join(target_path, f1, f2)
-                Save2Npy(file_dir=path1, save_dir=path2)
+                save_to_npy(file_dir=path1, save_dir=path2)
